@@ -22,6 +22,34 @@ impl FrameworkEval for VM {
     fn evaluate<E: EvalAtRow>(&self, mut eval: E) -> E {
         let mut a = eval.next_trace_mask();
         let mut b = eval.next_trace_mask();
+        self.program.iter().for_each(|op| {
+            let c = eval.next_trace_mask();
+            match op {
+                Op::Push(_) => {
+                    // nothing to do here
+                }
+                Op::Add => {
+                    // c = a + b
+                    eval.add_constraint(c.clone() - (a.clone() + b.clone()))
+                }
+                Op::Sub => {
+                    // c = a - b
+                    eval.add_constraint(c.clone() - (a.clone() - b.clone()))
+                }
+                Op::Mul => {
+                    // c = a * b
+                    eval.add_constraint(c.clone() - (a.clone() * b.clone()))
+                }
+                Op::Div => {
+                    // division constraint is results * divisor = dividend
+                    // a = c * b
+                    eval.add_constraint(a.clone() - (c.clone() * b.clone()))
+                }
+            };
+            // swapping to avoid cloning
+            std::mem::swap(&mut a, &mut b);
+            b = c;
+        });
         eval
     }
 }
