@@ -1,5 +1,3 @@
-pub mod prover;
-
 pub enum Op {
     // Push value to Stack
     Push(u32),
