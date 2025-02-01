@@ -4,3 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+stwo-prover = { git = "https://github.com/starkware-libs/stwo", rev = "30b2762" }
+itertools = "0.14.0"
+num-traits = "0.2.19"
+test-log = "0.2.17"
