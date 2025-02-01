@@ -12,7 +12,7 @@ pub enum Op {
 
 pub struct VM {
     program: Vec<Op>,
-    log_n_rows: u32,
+    pub log_n_rows: u32,
     // stack: Vec<Op>,
 }
 
