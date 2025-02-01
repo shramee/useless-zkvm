@@ -1,5 +1,6 @@
-use Op::{Add, Div, Mul, Push, Sub};
-use Useless_ZKVM::vm::run_vm;
+pub mod vm;
+use crate::vm::run_vm;
+use crate::vm::Op::{Add, Div, Mul, Push, Sub};
 
 fn main() {
     let program = Vec::from([

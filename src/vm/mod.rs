@@ -1,4 +1,4 @@
-enum Op {
+pub enum Op {
     // Push value to Stack
     Push(u32),
     // Arithmetic ops
