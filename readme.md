@@ -9,7 +9,7 @@ Uses immutable use once memory maintained as trace for proving and a vec (array/
 
 ### Supported instructions:
 
-* `Push(u32)`: Push a value onto the stack.
+* `Push(BaseField)`: Push a value onto the stack.
 * `Add`: Add the top two stack values.
 * `Sub`: Subtract the second stack value from the top.
 * `Mul`: Multiply the top two stack values.

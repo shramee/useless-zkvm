@@ -1,6 +1,8 @@
+use stwo_prover::core::fields::m31::BaseField;
+
 pub enum Op {
     // Push value to Stack
-    Push(u32),
+    Push(BaseField),
     // Arithmetic ops
     Add,
     Sub,

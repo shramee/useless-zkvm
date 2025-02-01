@@ -2,16 +2,20 @@ pub mod vm;
 use crate::vm::run_vm;
 use crate::vm::Op::{Add, Div, Mul, Push, Sub};
 
+pub fn felt(val: u32) -> BaseField {
+    BaseField::from_u32_unchecked(val)
+}
+
 fn main() {
     let program = Vec::from([
-        Push(3),
-        Push(7),
+        Push(felt(3)),
+        Push(felt(7)),
         Add,
-        Push(2),
+        Push(felt(2)),
         Mul,
-        Push(3434),
+        Push(felt(3434)),
         Div,
-        Push(567),
+        Push(felt(567)),
         Sub,
     ]);
 
