@@ -1,3 +1,5 @@
+pub mod prover;
+
 pub enum Op {
     // Push value to Stack
     Push(u32),
@@ -10,16 +12,22 @@ pub enum Op {
 
 pub struct VM {
     program: Vec<Op>,
+    log_n_rows: u32,
+    // stack: Vec<Op>,
 }
 
 impl Into<VM> for Vec<Op> {
     fn into(self) -> VM {
-        VM { program: self }
+        let rows = self.len();
+        VM {
+            program: self,
+            log_n_rows: rows.next_power_of_two().trailing_zeros(),
+        }
     }
 }
 
-pub fn run_vm(program: VM) {
-    program.program.iter().for_each(|op| match op {
+pub fn run_vm(vm: VM) {
+    vm.program.iter().for_each(|op| match op {
         Op::Push(val) => println!("Pushing {}", val),
         Op::Add => println!("Adding"),
         Op::Sub => println!("Subtracting"),
