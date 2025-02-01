@@ -14,15 +14,15 @@ use crate::vm::{Op, VM};
 
 impl FrameworkEval for VM {
     fn log_size(&self) -> u32 {
-        self.log_n_rows
+        self.log_n_rows()
     }
     fn max_constraint_log_degree_bound(&self) -> u32 {
-        self.log_n_rows + 1
+        self.log_n_rows() + 1
     }
     fn evaluate<E: EvalAtRow>(&self, mut eval: E) -> E {
         let mut a = eval.next_trace_mask();
         let mut b = eval.next_trace_mask();
-        self.program.iter().for_each(|op| {
+        self.program().iter().for_each(|op| {
             let c = eval.next_trace_mask();
             match op {
                 Op::Push(_) => {
