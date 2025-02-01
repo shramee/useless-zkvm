@@ -53,3 +53,19 @@ impl FrameworkEval for VM {
         eval
     }
 }
+
+pub fn generate_vm_trace(
+    vm: &VM,
+) -> ColumnVec<CircleEvaluation<SimdBackend, BaseField, BitReversedOrder>> {
+    let mut trace: Vec<BaseField> = Vec::new();
+    vm.program().iter().for_each(|op| match op {
+        Op::Push(val) => {
+            trace.push(value);
+        }
+        Op::Add => println!("Adding"),
+        Op::Sub => println!("Subtracting"),
+        Op::Mul => println!("Multiplying"),
+        Op::Div => println!("Dividing"),
+    });
+    trace
+}
