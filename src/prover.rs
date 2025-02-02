@@ -1,13 +1,11 @@
 use itertools::Itertools;
 
-use num_traits::{One, Zero};
+use num_traits::Zero;
 use stwo_prover::constraint_framework::{EvalAtRow, FrameworkComponent, FrameworkEval};
 use stwo_prover::core::backend::simd::column::BaseColumn;
 use stwo_prover::core::backend::simd::m31::PackedBaseField;
 use stwo_prover::core::backend::simd::SimdBackend;
-use stwo_prover::core::backend::{Col, Column};
 use stwo_prover::core::fields::m31::{BaseField, M31};
-use stwo_prover::core::fields::FieldExpOps;
 use stwo_prover::core::poly::circle::{CanonicCoset, CircleEvaluation};
 use stwo_prover::core::poly::BitReversedOrder;
 use stwo_prover::core::ColumnVec;
@@ -61,7 +59,7 @@ pub fn generate_vm_trace(
 ) -> ColumnVec<CircleEvaluation<SimdBackend, BaseField, BitReversedOrder>> {
     let mut els: Vec<M31> = Vec::new();
     vm.program().into_iter().for_each(|op| {
-        // col to modify
+        // find value from the operation
         let value = match op {
             Op::Push(value) => value.clone(),
             // op on the previous two elements
@@ -74,15 +72,22 @@ pub fn generate_vm_trace(
     });
 
     let mut trace: Vec<BaseColumn> = Vec::new();
-    let mut col = Col::<SimdBackend, BaseField>::
+    // Slightly ugly, but we don't wanna init with anything (not even zeroes)
+    let mut col = BaseColumn {
+        data: vec![],
+        length: 0,
+    };
 
     while els.len() > 0 {
-        col. = PackedBaseField::from_array(std::array::from_fn(|j| match els.pop() {
-            Some(val) => val,
-            None => BaseField::zero(),
-        }));
-        trace.push(col);
+        col.data
+            .push(PackedBaseField::from_array(std::array::from_fn(
+                |_| match els.pop() {
+                    Some(val) => val,
+                    None => BaseField::zero(),
+                },
+            )));
     }
+    trace.push(col);
 
     let domain = CanonicCoset::new(vm.log_size()).circle_domain();
     trace
