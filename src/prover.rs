@@ -1,10 +1,12 @@
 use itertools::Itertools;
 
+use num_traits::{One, Zero};
 use stwo_prover::constraint_framework::{EvalAtRow, FrameworkComponent, FrameworkEval};
+use stwo_prover::core::backend::simd::column::BaseColumn;
 use stwo_prover::core::backend::simd::m31::PackedBaseField;
 use stwo_prover::core::backend::simd::SimdBackend;
 use stwo_prover::core::backend::{Col, Column};
-use stwo_prover::core::fields::m31::BaseField;
+use stwo_prover::core::fields::m31::{BaseField, M31};
 use stwo_prover::core::fields::FieldExpOps;
 use stwo_prover::core::poly::circle::{CanonicCoset, CircleEvaluation};
 use stwo_prover::core::poly::BitReversedOrder;
@@ -57,15 +59,34 @@ impl FrameworkEval for VM {
 pub fn generate_vm_trace(
     vm: &VM,
 ) -> ColumnVec<CircleEvaluation<SimdBackend, BaseField, BitReversedOrder>> {
-    let mut trace: Vec<BaseField> = Vec::new();
-    vm.program().iter().for_each(|op| match op {
-        Op::Push(val) => {
-            trace.push(value);
-        }
-        Op::Add => println!("Adding"),
-        Op::Sub => println!("Subtracting"),
-        Op::Mul => println!("Multiplying"),
-        Op::Div => println!("Dividing"),
+    let mut els: Vec<M31> = Vec::new();
+    vm.program().into_iter().for_each(|op| {
+        // col to modify
+        let value = match op {
+            Op::Push(value) => value.clone(),
+            // op on the previous two elements
+            Op::Add => els[els.len() - 1].clone() + els[els.len() - 2].clone(),
+            Op::Sub => els[els.len() - 1].clone() - els[els.len() - 2].clone(),
+            Op::Mul => els[els.len() - 1].clone() * els[els.len() - 2].clone(),
+            Op::Div => els[els.len() - 1].clone() / els[els.len() - 2].clone(),
+        };
+        els.push(value);
     });
+
+    let mut trace: Vec<BaseColumn> = Vec::new();
+    let mut col = Col::<SimdBackend, BaseField>::
+
+    while els.len() > 0 {
+        col. = PackedBaseField::from_array(std::array::from_fn(|j| match els.pop() {
+            Some(val) => val,
+            None => BaseField::zero(),
+        }));
+        trace.push(col);
+    }
+
+    let domain = CanonicCoset::new(vm.log_size()).circle_domain();
     trace
+        .into_iter()
+        .map(|eval| CircleEvaluation::<SimdBackend, _, BitReversedOrder>::new(domain, eval))
+        .collect_vec()
 }
