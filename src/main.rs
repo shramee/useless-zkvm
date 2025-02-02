@@ -1,6 +1,7 @@
 pub mod vm;
 use crate::vm::run_vm;
 use crate::vm::Op::{Add, Div, Mul, Push, Sub};
+use stwo_prover::core::fields::m31::BaseField;
 
 pub fn felt(val: u32) -> BaseField {
     BaseField::from_u32_unchecked(val)

@@ -76,3 +76,7 @@ impl Into<VM> for Vec<Op> {
         }
     }
 }
+
+pub fn run_vm(vm: VM) -> M31 {
+    vm.run()
+}
