@@ -12,13 +12,14 @@ fn main() {
         Push(felt(3)),
         Push(felt(7)),
         Add,
-        Push(felt(2)),
+        Push(felt(6)),
         Mul,
-        Push(felt(3434)),
+        Push(felt(4)),
         Div,
-        Push(felt(567)),
+        Push(felt(1)),
         Sub,
     ]);
 
-    run_vm(program.into());
+    let result = run_vm(program.into());
+    println!("Result: {}", result);
 }
