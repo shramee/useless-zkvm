@@ -89,3 +89,37 @@ pub fn generate_vm_trace(
         .map(|col| CircleEvaluation::<SimdBackend, _, BitReversedOrder>::new(domain, col))
         .collect_vec()
 }
+
+#[cfg(test)]
+mod tests {
+    use itertools::Itertools;
+    use num_traits::Zero;
+    use stwo_prover::{
+        constraint_framework::{assert_constraints, FrameworkEval},
+        core::{fields::qm31::SecureField, pcs::TreeVec, poly::circle::CanonicCoset},
+    };
+
+    use crate::{prover::generate_vm_trace, utils::dummy_program};
+
+    #[test]
+    fn test_vm_constraints() {
+        let vm = dummy_program();
+
+        let traces = TreeVec::new(vec![vec![], generate_vm_trace(&vm)]);
+        let trace_polys =
+            traces.map(|trace| trace.into_iter().map(|c| c.interpolate()).collect_vec());
+
+        let num_rows = 1;
+
+        assert_constraints(
+            &trace_polys,
+            CanonicCoset::new(vm.log_size()),
+            |e| {
+                if e.row < num_rows {
+                    vm.evaluate(e);
+                }
+            },
+            SecureField::zero(),
+        );
+    }
+}
