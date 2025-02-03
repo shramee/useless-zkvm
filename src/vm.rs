@@ -46,7 +46,6 @@ impl VM {
                 } {
                     stack.push(b);
                     stack.push(res);
-                    println!("{:?} {}", op, res);
                 }
             }
         });

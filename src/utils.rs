@@ -1,5 +1,9 @@
 use crate::vm::{Op, VM};
-use stwo_prover::core::fields::m31::M31;
+use num_traits::Zero;
+use stwo_prover::core::{
+    backend::simd::{column::BaseColumn, m31::PackedBaseField},
+    fields::m31::M31,
+};
 use Op::{Add, Div, Mul, Push, Sub};
 
 pub fn felt(val: u32) -> M31 {
@@ -19,4 +23,17 @@ pub fn dummy_program() -> VM {
         Sub,
     ])
     .into()
+}
+
+pub fn one_row_col(val: M31, length: usize) -> BaseColumn {
+    return BaseColumn {
+        data: vec![PackedBaseField::from_array(std::array::from_fn(|i| {
+            if i == 0 {
+                val
+            } else {
+                M31::zero()
+            }
+        }))],
+        length,
+    };
 }
