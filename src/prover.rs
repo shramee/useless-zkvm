@@ -1,53 +1,54 @@
 use itertools::Itertools;
 
-use num_traits::Zero;
 use stwo_prover::constraint_framework::{EvalAtRow, FrameworkEval};
 use stwo_prover::core::backend::simd::column::BaseColumn;
-use stwo_prover::core::backend::simd::m31::PackedBaseField;
 use stwo_prover::core::backend::simd::SimdBackend;
 use stwo_prover::core::fields::m31::{BaseField, M31};
 use stwo_prover::core::poly::circle::{CanonicCoset, CircleEvaluation};
 use stwo_prover::core::poly::BitReversedOrder;
 use stwo_prover::core::ColumnVec;
 
+use crate::utils::one_row_col;
 use crate::vm::{Op, VM};
 
 impl FrameworkEval for VM {
     fn log_size(&self) -> u32 {
-        self.log_n_rows()
+        1
+        // self.log_n_rows()
     }
     fn max_constraint_log_degree_bound(&self) -> u32 {
-        self.log_n_rows() + 1
+        1
+        // self.log_n_rows() + 1
     }
     fn evaluate<E: EvalAtRow>(&self, mut eval: E) -> E {
         let mut a = eval.next_trace_mask();
         let mut b = eval.next_trace_mask();
-        self.program().iter().for_each(|op| {
+        self.program().iter().enumerate().for_each(|(i, op)| {
+            if i < 2 {
+                if let Op::Push(_) = op {
+                    // all good
+                } else {
+                    panic!("first two operations should be Push");
+                }
+                return;
+            }
             let c = eval.next_trace_mask();
-            println!("Constraint {:?}: {:?} | {:?} | {:?}", op, a, b, c);
-            match op {
-                Op::Push(_) => {
-                    // nothing to do here
+            if let Op::Push(_) = op {
+                // nothing here
+            } else {
+                if let Some(constraint) = match op {
+                    Op::Add => Some(c.clone() - (a.clone() + b.clone())), // c=a+b
+                    Op::Sub => Some(c.clone() - (a.clone() - b.clone())), // c=a-b
+                    Op::Mul => Some(c.clone() - (a.clone() * b.clone())), // c=a*b
+                    Op::Div => Some(a.clone() - (c.clone() * b.clone())), // a=c*b
+                    _ => None,
+                } {
+                    eval.add_constraint(constraint);
+                    println!("Constraint {:?}: {:?} | {:?} | {:?}", op, a, b, c);
                 }
-                Op::Add => {
-                    // c = a + b
-                    eval.add_constraint(c.clone() - (a.clone() + b.clone()))
-                }
-                Op::Sub => {
-                    // c = a - b
-                    eval.add_constraint(c.clone() - (a.clone() - b.clone()))
-                }
-                Op::Mul => {
-                    // c = a * b
-                    eval.add_constraint(c.clone() - (a.clone() * b.clone()))
-                }
-                Op::Div => {
-                    // division constraint is results * divisor = dividend
-                    // a = c * b
-                    eval.add_constraint(a.clone() - (c.clone() * b.clone()))
-                }
-            };
-            // swapping to avoid cloning
+            }
+
+            // swapping to avoid cloning, a = b, b = c, c is the next element on the trace
             std::mem::swap(&mut a, &mut b);
             b = c;
         });
@@ -63,7 +64,6 @@ pub fn generate_vm_trace(
         // find value from the operation
         if let Op::Push(val) = op {
             mem.push(*val);
-            println!("Trace: Psh {}", mem[mem.len() - 1]);
         } else {
             let b = mem[mem.len() - 1];
             let a = mem[mem.len() - 2];
@@ -74,33 +74,18 @@ pub fn generate_vm_trace(
                 Op::Div => mem.push(a / b),
                 _ => {}
             };
-            println!("Trace: {:?} {}", op, mem[mem.len() - 1]);
+            println!("Trace: {:?}: {:?} | {:?}", op, a, b);
         };
     });
 
     let mut trace: Vec<BaseColumn> = Vec::new();
-    // Slightly ugly, but we don't wanna init with anything (not even zeroes)
-    let mut mem_col = BaseColumn {
-        data: vec![],
-        length: 0,
-    };
-
-    while mem.len() > 0 {
-        mem_col
-            .data
-            .push(PackedBaseField::from_array(std::array::from_fn(
-                |_| match mem.pop() {
-                    Some(val) => val,
-                    None => BaseField::zero(),
-                },
-            )));
-    }
-    mem_col.length = mem_col.data.len();
-    trace.push(mem_col);
+    mem.into_iter().for_each(|val| {
+        trace.push(one_row_col(val, 2));
+    });
 
     let domain = CanonicCoset::new(vm.log_size()).circle_domain();
     trace
         .into_iter()
-        .map(|eval| CircleEvaluation::<SimdBackend, _, BitReversedOrder>::new(domain, eval))
+        .map(|col| CircleEvaluation::<SimdBackend, _, BitReversedOrder>::new(domain, col))
         .collect_vec()
 }
