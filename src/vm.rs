@@ -1,9 +1,9 @@
-use stwo_prover::core::fields::m31::{BaseField, M31};
+use stwo_prover::core::fields::m31::M31;
 
 #[derive(Debug)]
 pub enum Op {
     // Push value to Stack
-    Push(BaseField),
+    Push(M31),
     // Arithmetic ops
     Add,
     Sub,
@@ -63,8 +63,4 @@ impl Into<VM> for Vec<Op> {
             _log_n_rows: rows.next_power_of_two().trailing_zeros(),
         }
     }
-}
-
-pub fn run_vm(vm: VM) -> M31 {
-    vm.run()
 }
