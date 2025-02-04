@@ -15,16 +15,16 @@ pub type VMComponent<const N: usize> = FrameworkComponent<VM>;
 
 impl FrameworkEval for VM {
     fn log_size(&self) -> u32 {
-        1
+        2
         // self.log_n_rows()
     }
     fn max_constraint_log_degree_bound(&self) -> u32 {
-        1
-        // self.log_n_rows() + 1
+        self.log_size() + 1
     }
     fn evaluate<E: EvalAtRow>(&self, mut eval: E) -> E {
         let mut a = eval.next_trace_mask();
         let mut b = eval.next_trace_mask();
+
         self.program().iter().enumerate().for_each(|(i, op)| {
             if i < 2 {
                 if let Op::Push(_) = op {
@@ -82,7 +82,7 @@ pub fn generate_vm_trace(
 
     let mut trace: Vec<BaseColumn> = Vec::new();
     mem.into_iter().for_each(|val| {
-        trace.push(one_row_col(val, 2));
+        trace.push(one_row_col(val, vm.log_n_rows() as usize));
     });
 
     let domain = CanonicCoset::new(vm.log_size()).circle_domain();
