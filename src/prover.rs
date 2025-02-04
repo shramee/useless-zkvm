@@ -1,17 +1,26 @@
 use itertools::Itertools;
 
-use stwo_prover::constraint_framework::{EvalAtRow, FrameworkComponent, FrameworkEval};
+use num_traits::Zero;
+use stwo_prover::constraint_framework::{
+    EvalAtRow, FrameworkComponent, FrameworkEval, TraceLocationAllocator,
+};
+use stwo_prover::core::air::Component;
 use stwo_prover::core::backend::simd::column::BaseColumn;
 use stwo_prover::core::backend::simd::SimdBackend;
+use stwo_prover::core::channel::Blake2sChannel;
 use stwo_prover::core::fields::m31::{BaseField, M31};
-use stwo_prover::core::poly::circle::{CanonicCoset, CircleEvaluation};
+use stwo_prover::core::fields::qm31::SecureField;
+use stwo_prover::core::pcs::{CommitmentSchemeProver, CommitmentSchemeVerifier, PcsConfig};
+use stwo_prover::core::poly::circle::{CanonicCoset, CircleEvaluation, PolyOps};
 use stwo_prover::core::poly::BitReversedOrder;
+use stwo_prover::core::prover::{prove, verify, ProvingError, StarkProof};
+use stwo_prover::core::vcs::blake2_merkle::{Blake2sMerkleChannel, Blake2sMerkleHasher};
 use stwo_prover::core::ColumnVec;
 
 use crate::utils::one_row_col;
 use crate::vm::{Op, VM};
 
-pub type VMComponent<const N: usize> = FrameworkComponent<VM>;
+pub type VMComponent = FrameworkComponent<VM>;
 
 impl FrameworkEval for VM {
     fn log_size(&self) -> u32 {
@@ -90,6 +99,65 @@ pub fn generate_vm_trace(
         .into_iter()
         .map(|col| CircleEvaluation::<SimdBackend, _, BitReversedOrder>::new(domain, col))
         .collect_vec()
+}
+
+pub fn prove_vm(
+    vm: VM,
+) -> (
+    Result<StarkProof<Blake2sMerkleHasher>, ProvingError>,
+    VMComponent,
+) {
+    let config = PcsConfig::default();
+    // Precompute twiddles.
+    let twiddles = SimdBackend::precompute_twiddles(
+        CanonicCoset::new(vm.log_n_rows() + 1 + config.fri_config.log_blowup_factor)
+            .circle_domain()
+            .half_coset,
+    );
+
+    // Setup protocol.
+    let prover_channel = &mut Blake2sChannel::default();
+    let mut commitment_scheme =
+        CommitmentSchemeProver::<SimdBackend, Blake2sMerkleChannel>::new(config, &twiddles);
+
+    // Preprocessed trace
+    let mut tree_builder = commitment_scheme.tree_builder();
+    tree_builder.extend_evals([]);
+    tree_builder.commit(prover_channel);
+
+    // Trace.
+    let trace = generate_vm_trace(&vm);
+    let mut tree_builder = commitment_scheme.tree_builder();
+    tree_builder.extend_evals(trace);
+    tree_builder.commit(prover_channel);
+
+    // Prove constraints.
+    let component = VMComponent::new(
+        &mut TraceLocationAllocator::default(),
+        vm,
+        SecureField::zero(),
+    );
+
+    (
+        prove::<SimdBackend, Blake2sMerkleChannel>(
+            &[&component],
+            prover_channel,
+            commitment_scheme,
+        ),
+        component,
+    )
+}
+
+pub fn verify_vm(proof: StarkProof<Blake2sMerkleHasher>, component: VMComponent) {
+    let config = PcsConfig::default();
+    let verifier_channel = &mut Blake2sChannel::default();
+    let commitment_scheme = &mut CommitmentSchemeVerifier::<Blake2sMerkleChannel>::new(config);
+
+    // Retrieve the expected column sizes in each commitment interaction, from the AIR.
+    let sizes = component.trace_log_degree_bounds();
+    commitment_scheme.commit(proof.commitments[0], &sizes[0], verifier_channel);
+    commitment_scheme.commit(proof.commitments[1], &sizes[1], verifier_channel);
+    verify(&[&component], verifier_channel, commitment_scheme, proof).unwrap();
 }
 
 #[cfg(test)]
