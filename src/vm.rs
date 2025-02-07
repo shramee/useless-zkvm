@@ -1,8 +1,9 @@
-use stwo_prover::core::fields::m31::{BaseField, M31};
+use stwo_prover::core::fields::m31::M31;
 
+#[derive(Debug)]
 pub enum Op {
     // Push value to Stack
-    Push(BaseField),
+    Push(M31),
     // Arithmetic ops
     Add,
     Sub,
@@ -30,38 +31,24 @@ impl VM {
 
     pub fn run(&self) -> M31 {
         let mut stack = Vec::new();
-        self._program.iter().for_each(|op| match op {
-            Op::Push(val) => stack.push(*val),
-            Op::Add => {
-                let a = stack.pop().unwrap();
+        self._program.iter().for_each(|op| {
+            if let Op::Push(val) = op {
+                stack.push(*val)
+            } else {
                 let b = stack.pop().unwrap();
-                let res = a + b;
-                stack.push(b);
-                stack.push(res);
-            }
-            Op::Sub => {
                 let a = stack.pop().unwrap();
-                let b = stack.pop().unwrap();
-                let res = a - b;
-                stack.push(b);
-                stack.push(res);
-            }
-            Op::Mul => {
-                let a = stack.pop().unwrap();
-                let b = stack.pop().unwrap();
-                let res = a * b;
-                stack.push(b);
-                stack.push(res);
-            }
-            Op::Div => {
-                let a = stack.pop().unwrap();
-                let b = stack.pop().unwrap();
-                let res = a / b;
-                stack.push(b);
-                stack.push(res);
+                if let Some(res) = match op {
+                    Op::Add => Some(a + b),
+                    Op::Sub => Some(a - b),
+                    Op::Mul => Some(a * b),
+                    Op::Div => Some(a / b),
+                    _ => None,
+                } {
+                    stack.push(b);
+                    stack.push(res);
+                }
             }
         });
-        println!("Result: {:?}", stack.pop().unwrap());
 
         return stack.pop().unwrap();
     }
@@ -75,8 +62,4 @@ impl Into<VM> for Vec<Op> {
             _log_n_rows: rows.next_power_of_two().trailing_zeros(),
         }
     }
-}
-
-pub fn run_vm(vm: VM) -> M31 {
-    vm.run()
 }
