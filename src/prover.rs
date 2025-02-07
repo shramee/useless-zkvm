@@ -162,6 +162,7 @@ pub fn verify_vm(proof: StarkProof<Blake2sMerkleHasher>, component: VMComponent)
 
 #[cfg(test)]
 mod tests {
+    use super::{generate_vm_trace, prove_vm, verify_vm};
     use itertools::Itertools;
     use num_traits::Zero;
     use stwo_prover::{
@@ -169,10 +170,7 @@ mod tests {
         core::{fields::qm31::SecureField, pcs::TreeVec, poly::circle::CanonicCoset},
     };
 
-    use crate::{
-        prover::{generate_vm_trace, VMComponent},
-        utils::dummy_program,
-    };
+    use crate::utils::dummy_program;
 
     #[test]
     fn test_vm_constraints() {
@@ -201,7 +199,5 @@ mod tests {
         let vm = dummy_program();
         let (proof, component) = prove_vm(vm);
         verify_vm(proof.unwrap(), component);
-    }
-
     }
 }
